@@ -14,6 +14,7 @@ public class SimpleKV implements KeyValue {
 	private File actual_file;
 	private int tid;
 	private String temp_path;
+	private File temp_file;
 	/*
 	 * Trade off of having it all fit in memory vs efficient for everything
 	 * if could have infinite main memory, then i want a hashmap for inserts/lookups
@@ -25,7 +26,6 @@ public class SimpleKV implements KeyValue {
     	//this.simple_kv = new ArrayList<KVPair>();
     	//this.key_map = new TreeMap<String, Integer>();
     	this.krazy_keys = new HashMap<String, char[]>();
-    	this.pathfile = null;
     	this.tid = 0;
     }
     
@@ -40,13 +40,14 @@ public class SimpleKV implements KeyValue {
     	if (path !=  null) {
     		File file = new File(path);
     		kv.pathfile = path;
+    		kv.actual_file = file;
     		try {
-				BufferedReader br = new BufferedReader( new FileReader(file));
-				String s; String t;
+				BufferedReader br = new BufferedReader( new FileReader(kv.actual_file));
+				String s; 
 				while ((s = br.readLine()) != null) {
 					//add it to the kv krazy_keys store
-					t = br.readLine();
-					this.krazy_keys.put(s, t.toCharArray());
+					String[] arrofpair = s.split(" , ");
+					kv.krazy_keys.put(arrofpair[0], arrofpair[1].toCharArray());
 				}
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
