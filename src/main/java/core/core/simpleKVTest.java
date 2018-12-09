@@ -26,8 +26,20 @@ public class simpleKVTest  {
   }
   @Test public void testfileRead() {
 	  SimpleKV my_kv = new SimpleKV();
-	  SimpleKV my_kv2 = my_kv.initAndMakeStore("./test.txt");
-//	  System.out.println(my_kv2.krazy_keys[0]);
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;
+	  assertEquals(my_kv2.get_size(),2);
+	  System.out.println(my_kv2.read((new String("hello")).toCharArray()));
+  }
+  
+  @Test public void testCommit() {
+	  SimpleKV my_kv = new SimpleKV();
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;
+	  
+	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
+	  my_kv2.help_overwrite("/home/kbrandes/simpleKV/src/main/java/core/core/over_temp.txt");
+	  System.out.println("overwrite done");
+	  my_kv2.commit();
+	  //go check file on your own
   }
   
   @Test public void testCompareKVPair() {

@@ -15,6 +15,7 @@ public class SimpleKV implements KeyValue {
 	private int tid;
 	private String temp_path;
 	private File temp_file;
+	
 	/*
 	 * Trade off of having it all fit in memory vs efficient for everything
 	 * if could have infinite main memory, then i want a hashmap for inserts/lookups
@@ -29,6 +30,15 @@ public class SimpleKV implements KeyValue {
     	this.tid = 0;
     }
     
+    public void help_overwrite(String path) {
+    	this.temp_path = path;
+    	this.temp_file = new File(path);
+    }
+    
+    public double get_memory() {
+    	return this.get_size()*0.000032;
+    }
+    
     public int get_size() {
     	return this.krazy_keys.size();
     	
@@ -41,17 +51,30 @@ public class SimpleKV implements KeyValue {
     		File file = new File(path);
     		kv.pathfile = path;
     		kv.actual_file = file;
+    		
+    		this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
+    		File tfile = new File(this.temp_path);
+    		this.temp_file = tfile;
     		try {
 				BufferedReader br = new BufferedReader( new FileReader(kv.actual_file));
+				BufferedWriter bw = new BufferedWriter( new FileWriter(this.temp_file));
 				String s; 
 				while ((s = br.readLine()) != null) {
-					//add it to the kv krazy_keys store
-					String[] arrofpair = s.split(" , ");
-					kv.krazy_keys.put(arrofpair[0], arrofpair[1].toCharArray());
+					if (kv.get_memory() > 0.000032) {
+						//write to temp file
+						System.out.println("Write to temp");
+						bw.write(s);					
+					}else {
+						//add it to the kv krazy_keys store
+						String[] arrofpair = s.split(" , ");
+						kv.krazy_keys.put(arrofpair[0], arrofpair[1].toCharArray());
+					}
 				}
+				br.close();
+				bw.close();
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
-				System.out.println("No file found");
+				System.out.println("No file found!");
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Readline of buffered reader failed");
@@ -88,8 +111,30 @@ public class SimpleKV implements KeyValue {
     @Override
     public char[] read(char[] key) {
     	String k_string = new String(key);
-    	char[] next_kvp = this.krazy_keys.get(k_string);
-    	return next_kvp;
+    	if (this.krazy_keys.containsKey(k_string)) {
+    		//Case: in hashmap
+    		return this.krazy_keys.get(k_string);
+    	}
+    	else {
+    		//Case: in temp file
+    		try {
+        		BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
+        		String s;
+				while ((s=br.readLine())!=null) {
+					if (s.startsWith(k_string+" , ")) {
+						String[] arrofpair = s.split(" , ");
+						return arrofpair[1].toCharArray();
+					}
+				}
+				System.out.println("Reached end of temp and hashmap, but no value:(");
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Buffered reader in read failed");
+			}
+    		return null; //ideally dont reach here
+    	}
+
     	/*
     	if (next_kvp != null) {
     		return next_kvp;//.element2;
@@ -138,32 +183,85 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public void beginTx() {
-    	this.temp_path = "~/transaction"+this.tid+".txt";
-    	this.tid++; // locks on this/ the whole thread?
-    	
-    	
-    	System.out.println("Done!");
+    	// locks on this/ the whole thread?
+    	System.out.println("Txn Begins!");
     }
+    
 
     @Override
     public void commit() {
-    	if (this.temp_file.length() == 0) {
-    		//only look at memory structure
-    	}
-    	else {
-    		//copy file to replace current one
-    	}
+    	//Put everything onto disk (right now, read from reverse)
     	try {
-			BufferedWriter bw = new BufferedWriter(new FileWriter(this.temp_path));
-		} catch (IOException e) {
+			BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
+	    	String s; 
+
+	    	//Temp file to disk:
+			while ((s = br.readLine()) != null) {
+				System.out.println("temp"+s);
+				String[] arrofpair = s.split(" , ");
+				BufferedReader br2 = new BufferedReader(new FileReader(this.actual_file));
+				String s2;
+				int line_count = 0;
+				boolean done = false;
+				System.out.println("before reading ");
+				while((s2=br2.readLine())!=null && !done) {
+					System.out.println("actual "+s2);
+					line_count++;
+					if (s2.startsWith(arrofpair[0]+" , ")) {
+						System.out.println(s2+ " and "+s);
+						RandomAccessFile f = new RandomAccessFile(this.actual_file, "rw");
+						f.seek(line_count); // to the beginning
+						f.writeChars(s);
+						f.close();
+						done = true;
+					}
+				}
+				br2.close();
+				BufferedWriter bw = new BufferedWriter(new FileWriter(this.actual_file));
+		    	
+				if (!done) {
+					bw.write(s);
+				}
+
+				bw.close();
+			}
+			br.close();
+			//Hashmap to disk:
+			for (String k : this.krazy_keys.keySet()) {
+				String v = this.krazy_keys.get(k).toString();
+				String temp = k+" , "+v;
+				BufferedReader br2 = new BufferedReader(new FileReader(this.actual_file));
+				String s2;
+				int line_count = 0;
+				boolean done = false;
+				while((s2=br2.readLine())!=null && !done) {
+					line_count++;
+					if (s2.startsWith(k+" , ")) {
+						RandomAccessFile f = new RandomAccessFile(this.actual_file, "rw");
+						f.seek(line_count); // to the beginning
+						f.write(temp.getBytes());
+						f.close();
+						done = true;
+					}
+				}
+				br2.close();
+				BufferedWriter bw = new BufferedWriter(new FileWriter(this.actual_file));
+		    	
+				if (!done) {
+					bw.write(temp);
+				}
+				bw.close();
+			}
+    	} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Commit - file not found");
 		}
-    	
-    	for (String k : this.krazy_keys.keySet()) {
-    		
-    	}
-	System.out.println("Done!");
+
+    	//Make new temporary file
+    	this.tid++;
+    	this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
+		File tfile = new File(this.temp_path);
+		this.temp_file = tfile;
     }
 
 }
