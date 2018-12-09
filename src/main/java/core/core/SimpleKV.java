@@ -206,7 +206,7 @@ public class SimpleKV implements KeyValue {
 				System.out.println("before reading ");
 				while((s2=br2.readLine())!=null && !done) {
 					System.out.println("actual "+s2);
-					line_count++;
+					line_count+= s2.getBytes().length;
 					if (s2.startsWith(arrofpair[0]+" , ")) {
 						System.out.println(s2+ " and "+s);
 						RandomAccessFile f = new RandomAccessFile(this.actual_file, "rw");
