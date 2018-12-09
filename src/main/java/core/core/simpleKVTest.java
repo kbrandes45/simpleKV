@@ -8,9 +8,9 @@ import java.util.Iterator;
 
 import junit.framework.JUnit4TestAdapter;
 
-import org.junit.Before;
+//import org.junit.Before;
 import org.junit.Test;
-import java.io.*;
+//import java.io.*;
 import java.util.*;
 
 public class simpleKVTest  {
@@ -25,8 +25,9 @@ public class simpleKVTest  {
 	  
   }
   @Test public void testfileRead() {
-	  //SimpleKV my_kv = new SimpleKV("./test.txt");
-	  //System.out.println(my_kv.krazy_keys[0]);
+	  SimpleKV my_kv = new SimpleKV();
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("./test.txt");
+//	  System.out.println(my_kv2.krazy_keys[0]);
   }
   
   @Test public void testCompareKVPair() {
@@ -41,17 +42,17 @@ public class simpleKVTest  {
 	  my_kvps.add(kvp1);
 	  my_kvps.add(kvp2);
 	  my_kvps.add(kvp3);
-	  System.out.println(new String (my_kvps.get(0).element1));
+//	  System.out.println(new String (my_kvps.get(0).element1));
 	  Collections.sort(my_kvps);
-	  System.out.println(new String (my_kvps.get(0).element1));
-	  System.out.println(new String (my_kvps.get(1).element1));
+//	  System.out.println(new String (my_kvps.get(0).element1));
+//	  System.out.println(new String (my_kvps.get(1).element1));
 	  Iterator<KVPair> kv_it = my_kvps.iterator(); 
 	  int count = 1;
 	  char[] current = kv_it.next().element2;
-	  System.out.println("size"+my_kvps.size());
+//	  System.out.println("size"+my_kvps.size());
 	  while (current != null) {
 		  String temp = "v"+count;
-		  System.out.println("Current kvp:"+new String(current));
+//		  System.out.println("Current kvp:"+new String(current));
 		  //assertEquals(new String(current), temp);
 		  count++;
 		  if (kv_it.hasNext()) {
@@ -156,7 +157,7 @@ public class simpleKVTest  {
 	  long endTime = System.currentTimeMillis();
 	  long d1 = endTime - midTime;
 	  long d2 = midTime-startTime;
-	  System.out.println("Loaded 100,000 reads in "+ d1+"ms (did the writes in "+d2+"ms)");
+//	  System.out.println("Loaded 100,000 reads in "+ d1+"ms (did the writes in "+d2+"ms)");
     
   }
   
@@ -179,7 +180,7 @@ public class simpleKVTest  {
 	  }
 	  long endTime = System.currentTimeMillis();
 	  long duration = endTime - startTime;
-	  System.out.println("Load Test mix read/write(2*100,000+2*1000) in "+duration);
+//	  System.out.println("Load Test mix read/write(2*100,000+2*1000) in "+duration);
     
   }
   
@@ -204,7 +205,7 @@ public class simpleKVTest  {
 	  }
 	  long endTime = System.currentTimeMillis();
 	  long duration = endTime - startTime;
-	  System.out.println("Load range test in"+ duration+" ms");
+//	  System.out.println("Load range test in"+ duration+" ms");
     
   }
 
