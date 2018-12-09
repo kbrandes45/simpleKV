@@ -24,7 +24,7 @@ public interface KeyValue {
      * @param key
      * @param value
      */
-    void write(char[] key, char[] value);
+    void write(char[] key, char[] value );
 
     /**
      * To implement in Lab 5.

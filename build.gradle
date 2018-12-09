@@ -4,7 +4,13 @@ plugins {
     id 'idea'
 }
 
-version = 'TEAM-NAME'
+
+
+
+
+
+version = 'KB1.0'
+
 
 dependencies {
     testImplementation 'junit:junit:4.12'
