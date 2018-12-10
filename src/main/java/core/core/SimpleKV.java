@@ -49,8 +49,9 @@ public class SimpleKV implements KeyValue {
     		File file = new File(path);
     		kv.pathfile = path;
     		kv.actual_file = file;
-    		
-    		kv.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+kv.tid+".txt";
+    		String dir = System.getProperty("user.dir");
+    		System.out.println(dir);
+    		kv.temp_path = dir+"transaction"+kv.tid+".txt";
     		File clearout = new File(kv.temp_path);
     		clearout.delete();
     		File tfile = new File(kv.temp_path);
@@ -60,7 +61,7 @@ public class SimpleKV implements KeyValue {
 				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
-					if (kv.get_memory() > 500) {
+					if (kv.get_memory() > 400) {
 						//write to temp file
 						System.out.println("Write to temp!");
 						bw.write(s);
@@ -89,7 +90,7 @@ public class SimpleKV implements KeyValue {
     		String k_string = new String(key);
     		// Check if key in hashMap or if hashMap has space
     		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
-    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 500) {
+    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 400) {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
@@ -214,8 +215,9 @@ public class SimpleKV implements KeyValue {
     public void commit() {
     	try {
     		//create new secondary temp file of complete results
-    		String temp_p = "/home/kbrandes/simpleKV/src/main/java/core/core/TEMP.txt";
-    		File tfile = new File(temp_p);
+    		String dir = System.getProperty("user.dir");
+    		String secondary = dir+"TEMP.txt";
+    		File tfile = new File(secondary);
     		
     		//iterate over actual path
     		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
@@ -279,7 +281,8 @@ public class SimpleKV implements KeyValue {
 		
     	//Make new temporary file
     	this.tid++;
-    	this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
+    	String still_dir = System.getProperty("user.dir");
+    	this.temp_path = still_dir+"transaction"+this.tid+".txt";
 		File tfile = new File(this.temp_path);
 		this.temp_file = tfile;
     }
