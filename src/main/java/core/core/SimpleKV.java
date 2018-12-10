@@ -6,10 +6,10 @@ import java.util.Iterator;
 public class SimpleKV implements KeyValue {
 	private HashMap<String, char[]> krazy_keys;
 	private String pathfile;
-	private File actual_file;
+	//private File actual_file;
 	private int tid;
 	private String temp_path;
-	private File temp_file;
+	//private File temp_file;
 	
 	/*
 	 * Trade off of having it all fit in memory vs efficient for everything
@@ -24,13 +24,16 @@ public class SimpleKV implements KeyValue {
     	this.krazy_keys = new HashMap<String, char[]>();
     	this.tid = 0;
     }
+    public String get_actual_path() {
+    	return this.pathfile;
+    }
     public String get_path() {
     	return this.temp_path;
     }
     
     public void help_overwrite(String path) {
     	this.temp_path = path;
-    	this.temp_file = new File(path);
+    	//this.temp_file = new File(path);
     }
     
     public double get_memory() {
@@ -46,22 +49,36 @@ public class SimpleKV implements KeyValue {
     public SimpleKV initAndMakeStore(String path) {
     	SimpleKV kv = new SimpleKV();
     	if (path !=  null) {
-    		File file = new File(path);
-    		kv.pathfile = path;
-    		kv.actual_file = file;
     		String dir = System.getProperty("user.dir");
-    		System.out.println(dir);
+    		kv.pathfile = dir+path+".txt";
+    		File files = new File(kv.pathfile);
+    		System.out.println(kv.pathfile);
+    		try {
+				files.createNewFile();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				System.out.println("file failed");
+			}
+    		//kv.actual_file = files;
+    		//System.out.println(dir);
     		kv.temp_path = dir+"transaction"+kv.tid+".txt";
     		File clearout = new File(kv.temp_path);
     		clearout.delete();
     		File tfile = new File(kv.temp_path);
-    		kv.temp_file = tfile;
     		try {
-				BufferedReader br = new BufferedReader( new FileReader(kv.actual_file));
+				tfile.createNewFile();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				System.out.println("temp fails");
+			}
+    		//kv.temp_file = tfile;
+    		try {
+				BufferedReader br = new BufferedReader( new FileReader(new File(kv.pathfile)));
+				//System.out.println("here");
 				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
-					if (kv.get_memory() > 400) {
+					if (kv.get_memory() > 50) {
 						//write to temp file
 						System.out.println("Write to temp!");
 						bw.write(s);
@@ -76,7 +93,10 @@ public class SimpleKV implements KeyValue {
 				bw.close();
 				//kv.temp_file = tfile;
 			} catch (FileNotFoundException e) {
+				//throwing the error for buffered reader of actual file
+				//File a = new File (kv.pathfile);
 				System.out.println("No file found!");
+
 			} catch (IOException e) {
 				System.out.println("Readline of buffered reader failed");
 			}
@@ -90,7 +110,7 @@ public class SimpleKV implements KeyValue {
     		String k_string = new String(key);
     		// Check if key in hashMap or if hashMap has space
     		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
-    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 400) {
+    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 50) {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
@@ -123,7 +143,8 @@ public class SimpleKV implements KeyValue {
     	else {
     		//Case:not in hashmap, check in temp file
     		try {
-        		BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
+    			File tf = new File(this.temp_path);
+        		BufferedReader br = new BufferedReader(new FileReader(tf));
         		String s;
         		String best = new String();
 				while ((s=br.readLine())!=null) {
@@ -173,7 +194,8 @@ public class SimpleKV implements KeyValue {
     	}
     	//Iterate over temp file
 		try {
-			BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
+			File tf = new File (this.temp_path);
+			BufferedReader br = new BufferedReader(new FileReader(tf));
 	    	String s;
 	    	while ((s = br.readLine())!= null) {
 	    		String[] arrofpair = s.split(" , ");
@@ -225,7 +247,7 @@ public class SimpleKV implements KeyValue {
     		
     		//iterate over actual path
     		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
-			BufferedReader act_br = new BufferedReader(new FileReader(this.actual_file));
+			BufferedReader act_br = new BufferedReader(new FileReader(new File(this.pathfile)));
 			String a;
 			while ((a=act_br.readLine())!= null) {
 				String[] arrofpair = a.split(" , ");
@@ -238,7 +260,8 @@ public class SimpleKV implements KeyValue {
 					bw.newLine();
 				} else {
 					//check if it is in temp file
-					BufferedReader temp_br = new BufferedReader(new FileReader(this.temp_file));
+					File tf = new File (this.temp_path);
+					BufferedReader temp_br = new BufferedReader(new FileReader(tf));
 					String t; String best = new String();
 					while ((t=temp_br.readLine()) != null) {
 						if (t.startsWith(arrofpair[0]+" , ")) {
@@ -281,13 +304,15 @@ public class SimpleKV implements KeyValue {
 			
 			//lastly, add any values in temp file that arent already there
 			//should be ok if duplicates because will ultimately just have the best value at the end
-			BufferedReader temp_r2 = new BufferedReader(new FileReader(this.temp_file));
+			File tf = new File (this.temp_path);
+			BufferedReader temp_r2 = new BufferedReader(new FileReader(tf));
 			String tr;
 			while ((tr = temp_r2.readLine()) != null) {
 				String[] arrofpair = tr.split(" , ");
 				//want to add all temp values not in actual or the hashmap
 				if (!this.krazy_keys.containsKey(arrofpair[0])) {
-					BufferedReader tact = new BufferedReader(new FileReader(this.actual_file));
+					
+					BufferedReader tact = new BufferedReader(new FileReader(new File (this.pathfile)));
 					String ta;
 					boolean not_found = true;
 					while ((ta=tact.readLine())!= null) {
@@ -309,7 +334,8 @@ public class SimpleKV implements KeyValue {
 			bw.close();
 			
 			//Delete actual file such that clean replacement can happen
-			this.actual_file.delete();
+			File af = new File(this.pathfile);
+			af.delete();
 			
 			//create empty file at actual_file_path
 			File afile = new File(this.pathfile);
@@ -334,7 +360,13 @@ public class SimpleKV implements KeyValue {
     	String still_dir = System.getProperty("user.dir");
     	this.temp_path = still_dir+"transaction"+this.tid+".txt";
 		File tfile = new File(this.temp_path);
-		this.temp_file = tfile;
+		try {
+			tfile.createNewFile();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("commit file creat");
+		}
+		//this.temp_file = tfile;
     }
 
 }
