@@ -1,3 +1,6 @@
 hello , hi
 bye , b
 sup , dude
+hello , hi
+bye , b
+sup , dude

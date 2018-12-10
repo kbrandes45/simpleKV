@@ -211,8 +211,12 @@ public class SimpleKV implements KeyValue {
     }
     
 
+
     @Override
     public void commit() {
+    	//keep hashset that traks the strings added in first major iteration
+    	//then can just iterate through each once to add	
+    	
     	try {
     		//create new secondary temp file of complete results
     		String dir = System.getProperty("user.dir");
@@ -256,6 +260,52 @@ public class SimpleKV implements KeyValue {
 				
 			}
 			act_br.close();
+
+			//now add any new hashmap values to secondary file
+			for (String key : this.krazy_keys.keySet()) {
+				BufferedReader br_sec = new BufferedReader( new FileReader(tfile));
+				String p;
+				boolean done = false;
+				while ((p=br_sec.readLine()) != null) {
+					if (p.startsWith(key+" , ")) {
+						done = true;
+						break;
+					}
+				}
+				if (!done) {
+					bw.write(key+" , "+new String(this.krazy_keys.get(key)));
+					bw.newLine();
+				}
+				br_sec.close();
+			}
+			
+			//lastly, add any values in temp file that arent already there
+			//should be ok if duplicates because will ultimately just have the best value at the end
+			BufferedReader temp_r2 = new BufferedReader(new FileReader(this.temp_file));
+			String tr;
+			while ((tr = temp_r2.readLine()) != null) {
+				String[] arrofpair = tr.split(" , ");
+				//want to add all temp values not in actual or the hashmap
+				if (!this.krazy_keys.containsKey(arrofpair[0])) {
+					BufferedReader tact = new BufferedReader(new FileReader(this.actual_file));
+					String ta;
+					boolean not_found = true;
+					while ((ta=tact.readLine())!= null) {
+						if (ta.startsWith(arrofpair[0]+" , ")) {
+							not_found = false;
+						}
+							
+					}
+					if (not_found) {
+						bw.write(tr);
+						bw.newLine();
+					}
+					
+				}
+				
+			}
+			
+			//finally done writing secondary
 			bw.close();
 			
 			//Delete actual file such that clean replacement can happen
