@@ -192,7 +192,88 @@ public class SimpleKV implements KeyValue {
     public void commit() {
     	//Put everything onto disk (right now, read from reverse)
     	try {
-			BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
+    		//create new temp file of actual
+    		//iterate over actual path
+    		//check each value if it is in hashmap (if not, check temp file)
+    		//if not in either, then write from actual file
+    		//if in one of those, write most up to date
+    		//copy file down
+    		String temp_p = "/home/kbrandes/simpleKV/src/main/java/core/core/TEMP.txt";
+    		File tfile = new File(temp_p);
+    		System.out.println("pre first done");
+    		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
+    		
+			System.out.println("first done");
+			BufferedReader act_br = new BufferedReader(new FileReader(this.actual_file));
+			System.out.println("second done");
+			String a;
+			while ((a=act_br.readLine())!= null) {
+				String[] arrofpair = a.split(" , ");
+				//check if its in hashmap first
+				if (this.krazy_keys.containsKey(arrofpair[0])) {
+					System.out.println("here");
+					//best value -- break from loop
+					String val = new String(this.krazy_keys.get(arrofpair[0]));
+					System.out.println("Hashmap value: "+val);
+					String line = arrofpair[0]+" , "+val;
+					bw.write(line);
+					bw.newLine();
+				} else {
+					//check if it is in temp file
+					BufferedReader temp_br = new BufferedReader(new FileReader(this.temp_file));
+					System.out.println("temp read done");
+					String t; boolean done = false;
+					while ((t=temp_br.readLine()) != null && !done) {
+						if (t.startsWith(arrofpair[0]+" , ")) {
+							//found matching line, write to new file
+							bw.write(t);
+							bw.newLine();
+							done = true;
+						}
+					}
+					temp_br.close();
+					if (!done) {
+						//Not in hashmap or temp file, so just write same val as actual_file
+						bw.write(a);
+						bw.newLine();
+					}
+				}
+				
+			}
+			System.out.println("Finished first thing");
+			act_br.close();
+			bw.close();
+			this.actual_file.delete();
+			File afile = new File(this.pathfile);
+    		BufferedWriter bw_a = new BufferedWriter(new FileWriter(afile));
+    		BufferedReader new_temp_br = new BufferedReader(new FileReader(tfile));
+    		String s;
+    		while ((s = new_temp_br.readLine()) != null) {
+    			bw_a.write(s);
+    			System.out.println("pre newline");
+    			bw_a.newLine();
+    			System.out.println("post newline");
+    		}
+    		bw_a.close();
+    		new_temp_br.close();
+    	}catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Commit - file not found");
+		}
+    	
+		
+    	//Make new temporary file
+    	this.tid++;
+    	this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
+		File tfile = new File(this.temp_path);
+		this.temp_file = tfile;
+    }
+
+}
+    
+    
+/*
+ * 			
 	    	String s; 
 
 	    	//Temp file to disk:
@@ -255,13 +336,4 @@ public class SimpleKV implements KeyValue {
     	} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("Commit - file not found");
-		}
-
-    	//Make new temporary file
-    	this.tid++;
-    	this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
-		File tfile = new File(this.temp_path);
-		this.temp_file = tfile;
-    }
-
-}
+		}*/
