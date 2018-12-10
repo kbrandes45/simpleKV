@@ -29,6 +29,9 @@ public class SimpleKV implements KeyValue {
     	this.krazy_keys = new HashMap<String, char[]>();
     	this.tid = 0;
     }
+    public String get_path() {
+    	return this.temp_path;
+    }
     
     public void help_overwrite(String path) {
     	this.temp_path = path;
@@ -52,12 +55,12 @@ public class SimpleKV implements KeyValue {
     		kv.pathfile = path;
     		kv.actual_file = file;
     		
-    		this.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+this.tid+".txt";
-    		File tfile = new File(this.temp_path);
-    		this.temp_file = tfile;
+    		kv.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+kv.tid+".txt";
+    		File tfile = new File(kv.temp_path);
+    		kv.temp_file = tfile;
     		try {
 				BufferedReader br = new BufferedReader( new FileReader(kv.actual_file));
-				BufferedWriter bw = new BufferedWriter( new FileWriter(this.temp_file));
+				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
 					if (kv.get_memory() > 0.000032) {
@@ -72,6 +75,7 @@ public class SimpleKV implements KeyValue {
 				}
 				br.close();
 				bw.close();
+				//kv.temp_file = tfile;
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				System.out.println("No file found!");
@@ -133,16 +137,25 @@ public class SimpleKV implements KeyValue {
     	else {
     		//Case: in temp file
     		try {
+    			System.out.println("Checking temp files"+this.temp_path);
+    			//File tempfile = new File(this.temp_path);
         		BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
         		String s;
+        		System.out.println("reader made");
+        		String best = new String();
 				while ((s=br.readLine())!=null) {
 					if (s.startsWith(k_string+" , ")) {
 						String[] arrofpair = s.split(" , ");
-						return arrofpair[1].toCharArray();
+						best =  arrofpair[1];
 					}
 				}
-				System.out.println("Reached end of temp and hashmap, but no value:(");
-				
+				br.close();
+				if (best.length() != 0) {
+					return best.toCharArray();
+				}
+				else {
+					System.out.println("Reached end of temp and hashmap, but no value:(");
+				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Buffered reader in read failed");

@@ -31,6 +31,19 @@ public class simpleKVTest  {
 	  System.out.println(my_kv2.read((new String("hello")).toCharArray()));
   }
   
+  @Test public void testNonMemRead() {
+	  SimpleKV my_kv = new SimpleKV();
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  System.out.println(my_kv2.get_path());
+	  //assertEquals(my_kv2.get_size(),2);
+	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
+	  char[] readout = my_kv2.read(new String("sup").toCharArray()); 
+	  System.out.println(new String(readout));
+	  assertEquals(new String(readout), "dude");
+	  char [] readmem = my_kv2.read(new String("hello").toCharArray());
+	  assertEquals(new String(readmem), "hi");
+  }
+  
   @Test public void testCommit() {
 	  SimpleKV my_kv = new SimpleKV();
 	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;
