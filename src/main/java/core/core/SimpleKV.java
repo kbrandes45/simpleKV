@@ -274,17 +274,19 @@ public class SimpleKV implements KeyValue {
 					//check if it is in temp file
 					BufferedReader temp_br = new BufferedReader(new FileReader(this.temp_file));
 					System.out.println("temp read done");
-					String t; boolean done = false;
-					while ((t=temp_br.readLine()) != null && !done) {
+					String t; String best = new String();
+					while ((t=temp_br.readLine()) != null) {
 						if (t.startsWith(arrofpair[0]+" , ")) {
-							//found matching line, write to new file
-							bw.write(t);
-							bw.newLine();
-							done = true;
+							//set as best to get most uptodate line
+							best = t;
 						}
 					}
 					temp_br.close();
-					if (!done) {
+					if (best.length() != 0) {
+						//found matching line in temp file, write to new file
+						bw.write(best);
+						bw.newLine();
+					} else {
 						//Not in hashmap or temp file, so just write same val as actual_file
 						bw.write(a);
 						bw.newLine();
