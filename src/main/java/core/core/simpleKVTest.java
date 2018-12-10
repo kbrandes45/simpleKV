@@ -44,6 +44,39 @@ public class simpleKVTest  {
 	  assertEquals(new String(readmem), "hi");
   }
   
+  @Test public void testNonMemWrite() {
+	  SimpleKV my_kv2 = new SimpleKV();
+	  SimpleKV my_kv= my_kv2.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  
+	  //assertEquals(my_kv2.get_size(),2);
+	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
+	  my_kv.write("t1".toCharArray(), "v1".toCharArray());
+	  my_kv.write("t2".toCharArray(), "v2".toCharArray());
+	  my_kv.write("t3".toCharArray(), "v3".toCharArray());
+	  my_kv.write("t4".toCharArray(), "v4".toCharArray());
+	  my_kv.write("t5".toCharArray(), "v5".toCharArray());
+	  my_kv.write("t6".toCharArray(), "v6".toCharArray());
+	  assertEquals(5, my_kv.get_size());
+	  //go look at temp
+  }
+  @Test public void testNonMemRR() {
+	  SimpleKV my_kv2 = new SimpleKV();
+	  SimpleKV my_kv= my_kv2.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  
+	  //assertEquals(my_kv2.get_size(),2);
+	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
+	  my_kv.write("t1".toCharArray(), "v1".toCharArray());
+	  my_kv.write("t2".toCharArray(), "v2".toCharArray());
+	  my_kv.write("t3".toCharArray(), "v3".toCharArray());
+	  my_kv.write("t4".toCharArray(), "v4".toCharArray());
+	  my_kv.write("t5".toCharArray(), "v5".toCharArray());
+	  my_kv.write("t6".toCharArray(), "v6".toCharArray());
+	  Iterator<KVPair> it = my_kv.readRange("sup".toCharArray(), "tu".toCharArray());
+	  while (it.hasNext()){
+		  System.out.println("Readrange test: "+new String(it.next().element1));
+	  }
+  }
+  
   @Test public void testCommit() {
 	  SimpleKV my_kv = new SimpleKV();
 	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;

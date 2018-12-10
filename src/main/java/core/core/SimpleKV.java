@@ -65,8 +65,9 @@ public class SimpleKV implements KeyValue {
 				while ((s = br.readLine()) != null) {
 					if (kv.get_memory() > 0.000032) {
 						//write to temp file
-						System.out.println("Write to temp");
-						bw.write(s);					
+						System.out.println("Write to temp!");
+						bw.write(s);
+						bw.newLine();
 					}else {
 						//add it to the kv krazy_keys store
 						String[] arrofpair = s.split(" , ");
@@ -93,17 +94,21 @@ public class SimpleKV implements KeyValue {
     		String k_string = new String(key);
     		// Check if key in hashMap or if hashMap has space
     		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
-    		if (this.krazy_keys.containsKey(k_string) || this.krazy_keys.size()*32.0 < 5*0.000032) {
+    		if (this.krazy_keys.containsKey(k_string) || this.krazy_keys.size()*0.000032 < 5*0.000032) {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
+    			System.out.println(this.krazy_keys.keySet().size());
     			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
     			String valueToEvict = new String(this.krazy_keys.get(keyToEvict));
     			BufferedWriter temp_br;
 			try {
-				temp_br = new BufferedWriter(new FileWriter(this.temp_file));
+				System.out.println("Write to temp: "+ keyToEvict);
+				temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
 				temp_br.write(keyToEvict + " , " + valueToEvict);
+				temp_br.newLine();
 				temp_br.close();
+				System.out.println("temp is written at "+ this.temp_path);
 			} catch (IOException e1) {
 				System.out.println("Unable to open/use temp file");
 			}
@@ -167,22 +172,63 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public Iterator<KVPair> readRange(char[] startKey, char[] endKey) {
-    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>();
+    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>(); // most up to date pairs
+    	HashMap<String, Integer> indexes = new HashMap<String, Integer>();
     	String started = new String(startKey);
     	String ending = new String(endKey);
     	//If the start key is greater than the endkey
     	if (started.compareTo(ending) > 0)
     		return null;
+    	int count = 0;
+    	//Iterating over hashmap
     	for (String k : this.krazy_keys.keySet()) {
     		char[] next_kvp_e2 = this.krazy_keys.get(k);
     		//System.out.println(next_kvp.element1.toString().compareTo(ending));
     		//String next_kvp_e1 = new String(next_kvp.element1);
-    		KVPair next_kvp = new KVPair(k.toCharArray(), next_kvp_e2);
+    		//KVPair next_kvp = new KVPair(k.toCharArray(), next_kvp_e2);
     		boolean in_range = k.compareTo(started) >=0 && k.compareTo(ending)<=0;
     		if (in_range) {
+    			KVPair next_kvp = new KVPair(k.toCharArray(), next_kvp_e2);
     			temp_pairs.add(next_kvp);
-    		}
+    			indexes.put(k, count);
+    			count++;
+    		}  		
     	}
+    	//Iterate over temp file
+    	BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(this.temp_file));
+	    	String s;
+	    	while ((s = br.readLine())!= null) {
+	    		String[] arrofpair = s.split(" , ");
+	    		boolean in_range = arrofpair[0].compareTo(started) >=0 && arrofpair[0].compareTo(ending)<=0;
+	    		if (in_range) {
+		    		if (!this.krazy_keys.containsKey(arrofpair[0])) {
+						//key not already seen
+		    			KVPair next_kvp = new KVPair(arrofpair[0].toCharArray(), arrofpair[1].toCharArray());
+		    			if (indexes.containsKey(arrofpair[0])) {
+		    				//replace value at this index
+		    				int i = indexes.get(arrofpair[0]);
+		    				temp_pairs.set(i, next_kvp);
+		    			}
+		    			else {
+		    				temp_pairs.add(next_kvp);
+		    				count++;
+		    				indexes.put(arrofpair[0], count);
+		    			}
+		    			
+					}
+	    		}
+	    	}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Read range file not found");;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Read range readline failed");;
+		}
+
+    	
     	//System.out.println("First ele:"+new String(temp_pairs.get(0).element1)+new String(temp_pairs.get(4).element1));
     	return temp_pairs.iterator();
     }
