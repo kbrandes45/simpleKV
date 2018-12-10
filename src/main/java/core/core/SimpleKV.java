@@ -148,28 +148,6 @@ public class SimpleKV implements KeyValue {
     		return null; //ideally dont reach here
     	}
 
-    	/*
-    	if (next_kvp != null) {
-    		return next_kvp;//.element2;
-    	}
-    	else {
-    		//System.out.println("null val");
-    		return null;
-    	}
-    
-    	Integer nxt_ind = this.key_map.get(k_string);
-    	if (nxt_ind != null) { //not null, so in the tree
-    		//System.out.print(this.simple_kv.size());
-    		//System.out.println("Read!"+ new String(this.simple_kv.get(nxt_ind).element2));
-    		return this.simple_kv.get(nxt_ind).element2;		
-    	}
-    	else {
-    		//not there so new index
-    		//System.out.println("Read!");
-    		return null;
-    	}
-    	*/
-
     }
 
     @Override
