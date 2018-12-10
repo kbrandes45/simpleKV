@@ -86,26 +86,41 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public void write(char[] key, char[] value) {
-    	//KVPair kvp = new KVPair(key, value);
-    	String k_string = new String(key);
-    	//String v_string = new String(value);
-    	this.krazy_keys.put(k_string, value);
-    	
-    	/*
-    	Integer nxt_ind = this.key_map.get(k_string);
-    	//System.out.print(nxt_ind);
-    	if (nxt_ind != null) { //not null, so in the tree
-    		int index = (int) nxt_ind;
-    		this.simple_kv.set(index, kvp);    		
-    	}
-    	else {
-    		//not there so new index
-    		nxt_ind = this.simple_kv.size();
-    		this.key_map.put(k_string, nxt_ind);
-    		this.simple_kv.add(kvp);
-    	}
-    	*/
-    	//System.out.println("Written!");
+    		String k_string = new String(key);
+    		// Check if key in hashMap or if hashMap has space
+    		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
+    		if (this.krazy_keys.containsKey(k_string) || this.krazy_keys.size()*32.0 < 5*0.000032) {
+    			this.krazy_keys.put(k_string, value);
+    		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
+    		else {
+    			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
+    			String valueToEvict = new String(this.krazy_keys.get(keyToEvict));
+    			BufferedWriter temp_br;
+			try {
+				temp_br = new BufferedWriter(new FileWriter(this.temp_file));
+				temp_br.write(keyToEvict + " , " + valueToEvict);
+				temp_br.close();
+			} catch (IOException e1) {
+				System.out.println("Unable to open/use temp file");
+			}
+			this.krazy_keys.remove(keyToEvict); // evict key
+			this.krazy_keys.put(k_string, value); // write in new pair 
+    		}
+	    	
+	    	/*
+	    	Integer nxt_ind = this.key_map.get(k_string);
+	    	//System.out.print(nxt_ind);
+	    	if (nxt_ind != null) { //not null, so in the tree
+	    		int index = (int) nxt_ind;
+	    		this.simple_kv.set(index, kvp);    		
+	    	}
+	    	else {
+	    		//not there so new index
+	    		nxt_ind = this.simple_kv.size();
+	    		this.key_map.put(k_string, nxt_ind);
+	    		this.simple_kv.add(kvp);
+	    	}
+	    	*/
     }
 
     @Override
