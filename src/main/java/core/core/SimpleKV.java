@@ -4,11 +4,6 @@ import java.util.*;
 import java.util.Iterator;
 
 public class SimpleKV implements KeyValue {
-	//main storage for kv is the array list with KVPairs
-	//private ArrayList<KVPair> simple_kv;
-	//treemap to store arraylist index and key - keeps order on string keys, so range is good
-	//private TreeMap<String, Integer> key_map;
-	
 	private HashMap<String, char[]> krazy_keys;
 	private String pathfile;
 	private File actual_file;
@@ -56,6 +51,8 @@ public class SimpleKV implements KeyValue {
     		kv.actual_file = file;
     		
     		kv.temp_path = "/home/kbrandes/simpleKV/src/main/java/core/core/transaction"+kv.tid+".txt";
+    		File clearout = new File(kv.temp_path);
+    		clearout.delete();
     		File tfile = new File(kv.temp_path);
     		kv.temp_file = tfile;
     		try {
@@ -63,7 +60,7 @@ public class SimpleKV implements KeyValue {
 				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
-					if (kv.get_memory() > 0.000032) {
+					if (kv.get_memory() > 500) {
 						//write to temp file
 						System.out.println("Write to temp!");
 						bw.write(s);
@@ -78,10 +75,8 @@ public class SimpleKV implements KeyValue {
 				bw.close();
 				//kv.temp_file = tfile;
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
 				System.out.println("No file found!");
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				System.out.println("Readline of buffered reader failed");
 			}
     	}
@@ -94,42 +89,27 @@ public class SimpleKV implements KeyValue {
     		String k_string = new String(key);
     		// Check if key in hashMap or if hashMap has space
     		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
-    		if (this.krazy_keys.containsKey(k_string) || this.krazy_keys.size()*0.000032 < 5*0.000032) {
+    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 500) {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
-    			System.out.println(this.krazy_keys.keySet().size());
     			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
     			String valueToEvict = new String(this.krazy_keys.get(keyToEvict));
     			BufferedWriter temp_br;
-			try {
-				System.out.println("Write to temp: "+ keyToEvict);
-				temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
-				temp_br.write(keyToEvict + " , " + valueToEvict);
-				temp_br.newLine();
-				temp_br.close();
-				System.out.println("temp is written at "+ this.temp_path);
-			} catch (IOException e1) {
-				System.out.println("Unable to open/use temp file");
-			}
-			this.krazy_keys.remove(keyToEvict); // evict key
-			this.krazy_keys.put(k_string, value); // write in new pair 
+				try {
+					//System.out.println("Write to temp: "+ keyToEvict);
+					//Write evicted pair to end of temp file
+					temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
+					temp_br.write(keyToEvict + " , " + valueToEvict);
+					temp_br.newLine();
+					temp_br.close();
+				} catch (IOException e1) {
+					System.out.println("Unable to open/use temp file");
+				}
+				//Add new value to hashmap (after removing old)
+				this.krazy_keys.remove(keyToEvict); // evict key
+				this.krazy_keys.put(k_string, value); // write in new pair 
     		}
-	    	
-	    	/*
-	    	Integer nxt_ind = this.key_map.get(k_string);
-	    	//System.out.print(nxt_ind);
-	    	if (nxt_ind != null) { //not null, so in the tree
-	    		int index = (int) nxt_ind;
-	    		this.simple_kv.set(index, kvp);    		
-	    	}
-	    	else {
-	    		//not there so new index
-	    		nxt_ind = this.simple_kv.size();
-	    		this.key_map.put(k_string, nxt_ind);
-	    		this.simple_kv.add(kvp);
-	    	}
-	    	*/
     }
 
     @Override
@@ -140,30 +120,28 @@ public class SimpleKV implements KeyValue {
     		return this.krazy_keys.get(k_string);
     	}
     	else {
-    		//Case: in temp file
+    		//Case:not in hashmap, check in temp file
     		try {
-    			System.out.println("Checking temp files"+this.temp_path);
-    			//File tempfile = new File(this.temp_path);
         		BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
         		String s;
-        		System.out.println("reader made");
         		String best = new String();
 				while ((s=br.readLine())!=null) {
 					if (s.startsWith(k_string+" , ")) {
+						//Gets most up to date value from temp file
 						String[] arrofpair = s.split(" , ");
 						best =  arrofpair[1];
 					}
 				}
 				br.close();
 				if (best.length() != 0) {
+					//return best value of temp file
 					return best.toCharArray();
 				}
 				else {
 					System.out.println("Reached end of temp and hashmap, but no value:(");
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Buffered reader in read failed");
+				System.out.println("Buffered reader in Read operationfailed");
 			}
     		return null; //ideally dont reach here
     	}
@@ -172,8 +150,9 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public Iterator<KVPair> readRange(char[] startKey, char[] endKey) {
-    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>(); // most up to date pairs
-    	HashMap<String, Integer> indexes = new HashMap<String, Integer>();
+    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>(); // most up to date KV pairs
+    	//Map = key string, index at which respective kv pair is in temp_pair
+    	HashMap<String, Integer> indexes = new HashMap<String, Integer>(); 
     	String started = new String(startKey);
     	String ending = new String(endKey);
     	//If the start key is greater than the endkey
@@ -183,28 +162,24 @@ public class SimpleKV implements KeyValue {
     	//Iterating over hashmap
     	for (String k : this.krazy_keys.keySet()) {
     		char[] next_kvp_e2 = this.krazy_keys.get(k);
-    		//System.out.println(next_kvp.element1.toString().compareTo(ending));
-    		//String next_kvp_e1 = new String(next_kvp.element1);
-    		//KVPair next_kvp = new KVPair(k.toCharArray(), next_kvp_e2);
     		boolean in_range = k.compareTo(started) >=0 && k.compareTo(ending)<=0;
     		if (in_range) {
+    			//Add value to temp_pairs (and its index) 
     			KVPair next_kvp = new KVPair(k.toCharArray(), next_kvp_e2);
     			temp_pairs.add(next_kvp);
-    			indexes.put(k, count);
     			count++;
     		}  		
     	}
     	//Iterate over temp file
-    	BufferedReader br;
 		try {
-			br = new BufferedReader(new FileReader(this.temp_file));
+			BufferedReader br = new BufferedReader(new FileReader(this.temp_file));
 	    	String s;
 	    	while ((s = br.readLine())!= null) {
 	    		String[] arrofpair = s.split(" , ");
 	    		boolean in_range = arrofpair[0].compareTo(started) >=0 && arrofpair[0].compareTo(ending)<=0;
-	    		if (in_range) {
-		    		if (!this.krazy_keys.containsKey(arrofpair[0])) {
-						//key not already seen
+	    		if (in_range) { //Check if key in range
+		    		if (!this.krazy_keys.containsKey(arrofpair[0])) { //Check that key not in hashmap
+		    			//Add new key,value pair from temp_file to temp_pairs (and index)
 		    			KVPair next_kvp = new KVPair(arrofpair[0].toCharArray(), arrofpair[1].toCharArray());
 		    			if (indexes.containsKey(arrofpair[0])) {
 		    				//replace value at this index
@@ -221,15 +196,10 @@ public class SimpleKV implements KeyValue {
 	    		}
 	    	}
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Read range file not found");;
+			System.out.println("Read range file not found");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Read range readline failed");;
+			System.out.println("Read range readline failed");
 		}
-
-    	
-    	//System.out.println("First ele:"+new String(temp_pairs.get(0).element1)+new String(temp_pairs.get(4).element1));
     	return temp_pairs.iterator();
     }
 
@@ -242,42 +212,31 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public void commit() {
-    	//Put everything onto disk (right now, read from reverse)
     	try {
-    		//create new temp file of actual
-    		//iterate over actual path
-    		//check each value if it is in hashmap (if not, check temp file)
-    		//if not in either, then write from actual file
-    		//if in one of those, write most up to date
-    		//copy file down
+    		//create new secondary temp file of complete results
     		String temp_p = "/home/kbrandes/simpleKV/src/main/java/core/core/TEMP.txt";
     		File tfile = new File(temp_p);
-    		System.out.println("pre first done");
-    		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
     		
-			System.out.println("first done");
+    		//iterate over actual path
+    		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
 			BufferedReader act_br = new BufferedReader(new FileReader(this.actual_file));
-			System.out.println("second done");
 			String a;
 			while ((a=act_br.readLine())!= null) {
 				String[] arrofpair = a.split(" , ");
 				//check if its in hashmap first
 				if (this.krazy_keys.containsKey(arrofpair[0])) {
-					System.out.println("here");
-					//best value -- break from loop
+					//In hashmap -- write to secondary file the hashmap value
 					String val = new String(this.krazy_keys.get(arrofpair[0]));
-					System.out.println("Hashmap value: "+val);
 					String line = arrofpair[0]+" , "+val;
 					bw.write(line);
 					bw.newLine();
 				} else {
 					//check if it is in temp file
 					BufferedReader temp_br = new BufferedReader(new FileReader(this.temp_file));
-					System.out.println("temp read done");
 					String t; String best = new String();
 					while ((t=temp_br.readLine()) != null) {
 						if (t.startsWith(arrofpair[0]+" , ")) {
-							//set as best to get most uptodate line
+							//set as best to get most up-to-date line
 							best = t;
 						}
 					}
@@ -294,27 +253,29 @@ public class SimpleKV implements KeyValue {
 				}
 				
 			}
-			System.out.println("Finished first thing");
 			act_br.close();
 			bw.close();
+			
+			//Delete actual file such that clean replacement can happen
 			this.actual_file.delete();
+			
+			//create empty file at actual_file_path
 			File afile = new File(this.pathfile);
+			
+			//Iterate through secondary temp file and write ALL values to actual_file
     		BufferedWriter bw_a = new BufferedWriter(new FileWriter(afile));
     		BufferedReader new_temp_br = new BufferedReader(new FileReader(tfile));
     		String s;
     		while ((s = new_temp_br.readLine()) != null) {
     			bw_a.write(s);
-    			System.out.println("pre newline");
     			bw_a.newLine();
-    			System.out.println("post newline");
     		}
     		bw_a.close();
     		new_temp_br.close();
-    	}catch (IOException e) {
-			// TODO Auto-generated catch block
+    		
+    	} catch (IOException e) {
 			System.out.println("Commit - file not found");
 		}
-    	
 		
     	//Make new temporary file
     	this.tid++;
@@ -324,70 +285,4 @@ public class SimpleKV implements KeyValue {
     }
 
 }
-    
-    
-/*
- * 			
-	    	String s; 
 
-	    	//Temp file to disk:
-			while ((s = br.readLine()) != null) {
-				System.out.println("temp"+s);
-				String[] arrofpair = s.split(" , ");
-				BufferedReader br2 = new BufferedReader(new FileReader(this.actual_file));
-				String s2;
-				int line_count = 0;
-				boolean done = false;
-				System.out.println("before reading ");
-				while((s2=br2.readLine())!=null && !done) {
-					System.out.println("actual "+s2);
-					line_count+= s2.getBytes().length;
-					if (s2.startsWith(arrofpair[0]+" , ")) {
-						System.out.println(s2+ " and "+s);
-						RandomAccessFile f = new RandomAccessFile(this.actual_file, "rw");
-						f.seek(line_count); // to the beginning
-						f.writeChars(s);
-						f.close();
-						done = true;
-					}
-				}
-				br2.close();
-				BufferedWriter bw = new BufferedWriter(new FileWriter(this.actual_file));
-		    	
-				if (!done) {
-					bw.write(s);
-				}
-
-				bw.close();
-			}
-			br.close();
-			//Hashmap to disk:
-			for (String k : this.krazy_keys.keySet()) {
-				String v = this.krazy_keys.get(k).toString();
-				String temp = k+" , "+v;
-				BufferedReader br2 = new BufferedReader(new FileReader(this.actual_file));
-				String s2;
-				int line_count = 0;
-				boolean done = false;
-				while((s2=br2.readLine())!=null && !done) {
-					line_count++;
-					if (s2.startsWith(k+" , ")) {
-						RandomAccessFile f = new RandomAccessFile(this.actual_file, "rw");
-						f.seek(line_count); // to the beginning
-						f.write(temp.getBytes());
-						f.close();
-						done = true;
-					}
-				}
-				br2.close();
-				BufferedWriter bw = new BufferedWriter(new FileWriter(this.actual_file));
-		    	
-				if (!done) {
-					bw.write(temp);
-				}
-				bw.close();
-			}
-    	} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Commit - file not found");
-		}*/
