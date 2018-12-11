@@ -27,9 +27,9 @@ public class simpleKVTest  {
   
   @Test public void nonMemReadRangeTest() {
 	  SimpleKV my_kv2 = new SimpleKV();
-	  SimpleKV my_kv = my_kv2.initAndMakeStore("/home/kbrandes/simpleKV/teststore.txt");
-	  String start = "t"+1000;
-	  String end = "t"+1010;
+	  SimpleKV my_kv = my_kv2.initAndMakeStore("/teststore");
+	  String start = "t"+6374103;
+	  String end = "t"+6374113;
 	  Iterator<KVPair> it = my_kv.readRange(start.toCharArray(), end.toCharArray());
 	  int count = 0;
 	  KVPair current = null;
@@ -143,7 +143,7 @@ public class simpleKVTest  {
 	  my_kv.write("t4".toCharArray(), "v4".toCharArray());
 	  my_kv.write("t5".toCharArray(), "v5".toCharArray());
 	  my_kv.write("t6".toCharArray(), "v6".toCharArray());
-	  assertEquals(5, my_kv.get_size());
+	  assertEquals(9, my_kv.get_size());
 	  //go look at temp
   }
   @Test public void testNonMemRR() {

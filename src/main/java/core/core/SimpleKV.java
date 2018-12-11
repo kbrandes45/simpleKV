@@ -178,7 +178,7 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public Iterator<KVPair> readRange(char[] startKey, char[] endKey) {
-    	
+    	return new ReadRangeIterator(this.krazy_keys, this.temp_path, new String(startKey), new String(endKey));
 //    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>(); // most up to date KV pairs
 //    	//Map = key string, index at which respective kv pair is in temp_pair
 //    	HashMap<String, Integer> indexes = new HashMap<String, Integer>(); 
