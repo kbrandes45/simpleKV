@@ -76,7 +76,7 @@ public class simpleKVTest  {
 	  long start = Runtime.getRuntime().freeMemory();
 	  System.out.println("Free "+start);
 	  System.out.println(Runtime.getRuntime().totalMemory());
-	  for (int i = 0; i<10000; i++) {
+	  for (int i = 0; i<5000000; i++) {
 		  String temp = "t"+i;
 		  String tempval = "v"+i;
 		  my_kv.write(temp.toCharArray(), tempval.toCharArray());

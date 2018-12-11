@@ -117,28 +117,31 @@ public class SimpleKV implements KeyValue {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
-    			System.out.println("Starting eviction case");
+    			System.out.println("key: "+k_string);
+    			System.out.println("Starting eviction case"+this.krazy_keys.size()+" mem "+Runtime.getRuntime().freeMemory());
     			int count = 0;
     			int goal = (int) (this.krazy_keys.size()/2.0);
-    			String[] keyarr = (String[]) this.krazy_keys.keySet().toArray();
+    			Object[] keyarr = this.krazy_keys.keySet().toArray();	
+    			try {
+    				BufferedWriter temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
+	    			for (Object oevict : keyarr) {
+	    				String keyToEvict = (String) oevict;
+	    				//System.out.println("Write to temp: "+ keyToEvict);
+	    				//Write evicted pair to end of temp file
+	    				temp_br.write(keyToEvict + " , " + new String(this.krazy_keys.get(keyToEvict)));
+	    				temp_br.newLine();
+	    				
+	    				this.krazy_keys.remove(keyToEvict);
+	    				count++;
+	    				if (count > goal)
+	    					break;
+	    			}
+	    			temp_br.close();
+    			} catch (IOException e1) {
+					System.out.println("Unable to open/use temp file");
+				}
+    			System.out.println("Eviction complete+ "+this.krazy_keys.size()+ " mem "+Runtime.getRuntime().freeMemory());
     			
-    			for (String keyToEvict : keyarr) {
-        			BufferedWriter temp_br;
-    				try {
-    					//System.out.println("Write to temp: "+ keyToEvict);
-    					//Write evicted pair to end of temp file
-    					temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
-    					temp_br.write(keyToEvict + " , " + new String(this.krazy_keys.get(keyToEvict)));
-    					temp_br.newLine();
-    					temp_br.close();
-    				} catch (IOException e1) {
-    					System.out.println("Unable to open/use temp file");
-    				}
-    				this.krazy_keys.remove(keyToEvict);
-    				count++;
-    				if (count > goal)
-    					break;
-    			}
     			this.krazy_keys.put(k_string, value);
     			
 //    			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
