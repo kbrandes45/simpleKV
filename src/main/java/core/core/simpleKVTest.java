@@ -28,18 +28,19 @@ public class simpleKVTest  {
   
   @Test public void nonmemWriteTest() throws Exception {
 	  SimpleKV my_kv2 = new SimpleKV();
+	  long beforeCreation = Runtime.getRuntime().freeMemory();
 	  SimpleKV my_kv = my_kv2.initAndMakeStore("/teststore");
+	  long difference = Runtime.getRuntime().freeMemory()-beforeCreation;
+	  System.out.println("Creating KV takes " + difference);
 	  long startTime = System.currentTimeMillis();
 	  long start = Runtime.getRuntime().freeMemory();
 	  System.out.println("Free "+start);
-	  System.out.println(Runtime.getRuntime().totalMemory());
-	  for (int i = 0; i<10000000; i++) {
+	  for (int i = 0; i<100000; i++) {
 		  String temp = "t"+i;
 		  String tempval = "v"+i;
 		  my_kv.write(temp.toCharArray(), tempval.toCharArray());
 	  }
 	  System.out.println("Free "+Runtime.getRuntime().freeMemory());
-	  System.out.println("Total "+Runtime.getRuntime().totalMemory());
 	  long out = start - Runtime.getRuntime().freeMemory();
 	  System.out.println("All: "+out);
 	  long endTime = System.currentTimeMillis();
