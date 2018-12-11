@@ -9,6 +9,7 @@ public class SimpleKV implements KeyValue {
 	//private File actual_file;
 	private int tid;
 	private String temp_path;
+	private boolean temp_populated;
 	//private File temp_file;
 	
 	/*
@@ -23,6 +24,7 @@ public class SimpleKV implements KeyValue {
     	//this.key_map = new TreeMap<String, Integer>();
     	this.krazy_keys = new HashMap<String, char[]>();
     	this.tid = 0;
+    	this.temp_populated = false;
     }
     public String get_actual_path() {
     	return this.pathfile;
@@ -61,7 +63,7 @@ public class SimpleKV implements KeyValue {
 			}
     		//kv.actual_file = files;
     		//System.out.println(dir);
-    		kv.temp_path = dir+"transaction"+kv.tid+".txt";
+    		kv.temp_path = dir+"/transaction"+kv.tid+".txt";
     		File clearout = new File(kv.temp_path);
     		clearout.delete();
     		File tfile = new File(kv.temp_path);
@@ -91,6 +93,7 @@ public class SimpleKV implements KeyValue {
 				}
 				br.close();
 				bw.close();
+				this.temp_populated = true;
 				//kv.temp_file = tfile;
 			} catch (FileNotFoundException e) {
 				//throwing the error for buffered reader of actual file
@@ -114,22 +117,46 @@ public class SimpleKV implements KeyValue {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
-    			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
-    			String valueToEvict = new String(this.krazy_keys.get(keyToEvict));
-    			BufferedWriter temp_br;
-				try {
-					//System.out.println("Write to temp: "+ keyToEvict);
-					//Write evicted pair to end of temp file
-					temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
-					temp_br.write(keyToEvict + " , " + valueToEvict);
-					temp_br.newLine();
-					temp_br.close();
-				} catch (IOException e1) {
-					System.out.println("Unable to open/use temp file");
-				}
-				//Add new value to hashmap (after removing old)
-				this.krazy_keys.remove(keyToEvict); // evict key
-				this.krazy_keys.put(k_string, value); // write in new pair 
+    			System.out.println("Starting eviction case");
+    			int count = 0;
+    			int goal = (int) (this.krazy_keys.size()/2.0);
+    			String[] keyarr = (String[]) this.krazy_keys.keySet().toArray();
+    			
+    			for (String keyToEvict : keyarr) {
+        			BufferedWriter temp_br;
+    				try {
+    					//System.out.println("Write to temp: "+ keyToEvict);
+    					//Write evicted pair to end of temp file
+    					temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
+    					temp_br.write(keyToEvict + " , " + new String(this.krazy_keys.get(keyToEvict)));
+    					temp_br.newLine();
+    					temp_br.close();
+    				} catch (IOException e1) {
+    					System.out.println("Unable to open/use temp file");
+    				}
+    				this.krazy_keys.remove(keyToEvict);
+    				count++;
+    				if (count > goal)
+    					break;
+    			}
+    			this.krazy_keys.put(k_string, value);
+    			
+//    			String keyToEvict = (String) this.krazy_keys.keySet().toArray()[0];
+//    			String valueToEvict = new String(this.krazy_keys.get(keyToEvict));
+//    			BufferedWriter temp_br;
+//				try {
+//					//System.out.println("Write to temp: "+ keyToEvict);
+//					//Write evicted pair to end of temp file
+//					temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
+//					temp_br.write(keyToEvict + " , " + valueToEvict);
+//					temp_br.newLine();
+//					temp_br.close();
+//				} catch (IOException e1) {
+//					System.out.println("Unable to open/use temp file");
+//				}
+//				//Add new value to hashmap (after removing old)
+//				this.krazy_keys.remove(keyToEvict); // evict key
+//				this.krazy_keys.put(k_string, value); // write in new pair 
     		}
     }
 
@@ -228,146 +255,247 @@ public class SimpleKV implements KeyValue {
 
     @Override
     public void beginTx() {
-    	// locks on this/ the whole thread?
-    	System.out.println("Txn Begins!");
+    	if (!temp_populated) {
+    		//must populated ourselves
+    		File temp_file = new File(this.temp_path);
+    		this.krazy_keys = new HashMap<String, char[]>();
+    		try {
+				BufferedReader br = new BufferedReader(new FileReader(new File(this.pathfile)));
+				BufferedWriter bw = new BufferedWriter(new FileWriter(temp_file));
+				
+				String s; 
+				try {
+					while ((s = br.readLine()) != null) {
+						if (this.get_memory() > 50) {
+							//write to temp file
+							System.out.println("Write to temp!");
+							bw.write(s);
+							bw.newLine();
+						}else {
+							//add it to the kv krazy_keys store
+							String[] arrofpair = s.split(" , ");
+							this.krazy_keys.put(arrofpair[0], arrofpair[1].toCharArray());
+						}
+					}
+					br.close();
+					bw.close();
+					
+				}  catch (IOException e1) {
+					// TODO Auto-generated catch block
+					System.out.println("Buffers failing in begin txn");
+				}
+				
+			} catch (FileNotFoundException e) {
+				System.out.println("Failed to make buffered reader for actual in begin TXN");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("buffered read of temp fialing in begin txn");
+			}
+    		
+    		
+    		
+    	}
+    	
     }
-    
-
-
     @Override
     public void commit() {
-    	//keep hashset that traks the strings added in first major iteration
-    	//then can just iterate through each once to add	
-    	
+    	//iterate through all of hashmap and add to end of temp
+    	//iterate through all of temp, and write as actual
+    	//append values to the end of actual
+    		
+    	//Iterate through hashmap and append all new values to temp_file
     	try {
-    		//create new secondary temp file of complete results
-    		String dir = System.getProperty("user.dir");
-    		String secondary = dir+"TEMP.txt";
-    		File tfile = new File(secondary);
-    		
-    		//iterate over actual path
-    		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
-			BufferedReader act_br = new BufferedReader(new FileReader(new File(this.pathfile)));
-			String a;
-			while ((a=act_br.readLine())!= null) {
-				String[] arrofpair = a.split(" , ");
-				//check if its in hashmap first
-				if (this.krazy_keys.containsKey(arrofpair[0])) {
-					//In hashmap -- write to secondary file the hashmap value
-					String val = new String(this.krazy_keys.get(arrofpair[0]));
-					String line = arrofpair[0]+" , "+val;
-					bw.write(line);
-					bw.newLine();
-				} else {
-					//check if it is in temp file
-					File tf = new File (this.temp_path);
-					BufferedReader temp_br = new BufferedReader(new FileReader(tf));
-					String t; String best = new String();
-					while ((t=temp_br.readLine()) != null) {
-						if (t.startsWith(arrofpair[0]+" , ")) {
-							//set as best to get most up-to-date line
-							best = t;
-						}
-					}
-					temp_br.close();
-					if (best.length() != 0) {
-						//found matching line in temp file, write to new file
-						bw.write(best);
-						bw.newLine();
-					} else {
-						//Not in hashmap or temp file, so just write same val as actual_file
-						bw.write(a);
-						bw.newLine();
-					}
-				}
-				
+			BufferedWriter temp_bw = new BufferedWriter(new FileWriter(this.temp_path));
+			for (String k : this.krazy_keys.keySet()) {
+				String line = k + " , "+new String(this.krazy_keys.get(k));
+				temp_bw.write(line);
+				temp_bw.newLine();
+				//this.krazy_keys.remove(k);
 			}
-			act_br.close();
-
-			//now add any new hashmap values to secondary file
-			for (String key : this.krazy_keys.keySet()) {
-				BufferedReader br_sec = new BufferedReader( new FileReader(tfile));
-				String p;
-				boolean done = false;
-				while ((p=br_sec.readLine()) != null) {
-					if (p.startsWith(key+" , ")) {
-						done = true;
-						break;
-					}
-				}
-				if (!done) {
-					bw.write(key+" , "+new String(this.krazy_keys.get(key)));
-					bw.newLine();
-				}
-				br_sec.close();
+			temp_bw.close();
+		} catch (IOException e1) {
+			System.out.println("Failed to make buffered writer for temp in commit");
+		}
+    	
+		
+		//Delete original contents of actual_file
+		File af = new File(this.pathfile);
+		af.delete();
+		
+		//create empty file at actual_file_path
+		File afile = new File(this.pathfile);
+		
+		try {
+			boolean newa = afile.createNewFile();
+			if (!newa) {
+				System.out.println("New actual file wasnt created... so not deleted");
 			}
-			
-			//lastly, add any values in temp file that arent already there
-			//should be ok if duplicates because will ultimately just have the best value at the end
-			File tf = new File (this.temp_path);
-			BufferedReader temp_r2 = new BufferedReader(new FileReader(tf));
-			String tr;
-			while ((tr = temp_r2.readLine()) != null) {
-				String[] arrofpair = tr.split(" , ");
-				//want to add all temp values not in actual or the hashmap
-				if (!this.krazy_keys.containsKey(arrofpair[0])) {
-					
-					BufferedReader tact = new BufferedReader(new FileReader(new File (this.pathfile)));
-					String ta;
-					boolean not_found = true;
-					while ((ta=tact.readLine())!= null) {
-						if (ta.startsWith(arrofpair[0]+" , ")) {
-							not_found = false;
-						}
-							
-					}
-					if (not_found) {
-						bw.write(tr);
-						bw.newLine();
-					}
-					
-				}
-				
-			}
-			
-			//finally done writing secondary
-			bw.close();
-			
-			//Delete actual file such that clean replacement can happen
-			File af = new File(this.pathfile);
-			af.delete();
-			
-			//create empty file at actual_file_path
-			File afile = new File(this.pathfile);
-			
-			//Iterate through secondary temp file and write ALL values to actual_file
-    		BufferedWriter bw_a = new BufferedWriter(new FileWriter(afile));
-    		BufferedReader new_temp_br = new BufferedReader(new FileReader(tfile));
-    		String s;
-    		while ((s = new_temp_br.readLine()) != null) {
-    			bw_a.write(s);
-    			bw_a.newLine();
-    		}
-    		bw_a.close();
-    		new_temp_br.close();
-    		
-    	} catch (IOException e) {
-			System.out.println("Commit - file not found");
+		} catch (IOException e1) {
+			System.out.println("Creating new actual file");
 		}
 		
-    	//Make new temporary file
-    	this.tid++;
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(afile));
+			BufferedReader temp_br = new BufferedReader(new FileReader(new File(this.temp_path)));
+			String a;
+			while ((a=temp_br.readLine())!= null) {
+				bw.write(a);
+				bw.newLine();	
+			}
+			bw.close();
+			temp_br.close();
+		} catch (IOException e) {
+			System.out.println("Failing to read line from temp file in commit");
+		}
+		
+		this.tid++;
     	String still_dir = System.getProperty("user.dir");
-    	this.temp_path = still_dir+"transaction"+this.tid+".txt";
+    	this.temp_path = still_dir+"/transaction"+this.tid+".txt";
 		File tfile = new File(this.temp_path);
 		try {
 			tfile.createNewFile();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("commit file creat");
+			System.out.println("commit: new txn temp_file failed to create");
 		}
-		//this.temp_file = tfile;
+		this.temp_populated=false;
+    	
     }
-
+    
 }
+
+//    public void committer() {
+//    	//keep hashset that traks the strings added in first major iteration
+//    	//then can just iterate through each once to add	
+//    	
+//    	try {
+//    		//create new secondary temp file of complete results
+//    		String dir = System.getProperty("user.dir");
+//    		String secondary = dir+"TEMP.txt";
+//    		File tfile = new File(secondary);
+//    		
+//    		//iterate over actual path
+//    		BufferedWriter bw = new BufferedWriter(new FileWriter(tfile));
+//			BufferedReader act_br = new BufferedReader(new FileReader(new File(this.pathfile)));
+//			String a;
+//			while ((a=act_br.readLine())!= null) {
+//				String[] arrofpair = a.split(" , ");
+//				//check if its in hashmap first
+//				if (this.krazy_keys.containsKey(arrofpair[0])) {
+//					//In hashmap -- write to secondary file the hashmap value
+//					String val = new String(this.krazy_keys.get(arrofpair[0]));
+//					String line = arrofpair[0]+" , "+val;
+//					bw.write(line);
+//					bw.newLine();
+//				} else {
+//					//check if it is in temp file
+//					File tf = new File (this.temp_path);
+//					BufferedReader temp_br = new BufferedReader(new FileReader(tf));
+//					String t; String best = new String();
+//					while ((t=temp_br.readLine()) != null) {
+//						if (t.startsWith(arrofpair[0]+" , ")) {
+//							//set as best to get most up-to-date line
+//							best = t;
+//						}
+//					}
+//					temp_br.close();
+//					if (best.length() != 0) {
+//						//found matching line in temp file, write to new file
+//						bw.write(best);
+//						bw.newLine();
+//					} else {
+//						//Not in hashmap or temp file, so just write same val as actual_file
+//						bw.write(a);
+//						bw.newLine();
+//					}
+//				}
+//				
+//			}
+//			act_br.close();
+//
+//			//now add any new hashmap values to secondary file
+//			for (String key : this.krazy_keys.keySet()) {
+//				BufferedReader br_sec = new BufferedReader( new FileReader(tfile));
+//				String p;
+//				boolean done = false;
+//				while ((p=br_sec.readLine()) != null) {
+//					if (p.startsWith(key+" , ")) {
+//						done = true;
+//						break;
+//					}
+//				}
+//				if (!done) {
+//					bw.write(key+" , "+new String(this.krazy_keys.get(key)));
+//					bw.newLine();
+//				}
+//				br_sec.close();
+//			}
+//			
+//			//lastly, add any values in temp file that arent already there
+//			//should be ok if duplicates because will ultimately just have the best value at the end
+//			File tf = new File (this.temp_path);
+//			BufferedReader temp_r2 = new BufferedReader(new FileReader(tf));
+//			String tr;
+//			while ((tr = temp_r2.readLine()) != null) {
+//				String[] arrofpair = tr.split(" , ");
+//				//want to add all temp values not in actual or the hashmap
+//				if (!this.krazy_keys.containsKey(arrofpair[0])) {
+//					
+//					BufferedReader tact = new BufferedReader(new FileReader(new File (this.pathfile)));
+//					String ta;
+//					boolean not_found = true;
+//					while ((ta=tact.readLine())!= null) {
+//						if (ta.startsWith(arrofpair[0]+" , ")) {
+//							not_found = false;
+//						}
+//							
+//					}
+//					if (not_found) {
+//						bw.write(tr);
+//						bw.newLine();
+//					}
+//					
+//				}
+//				
+//			}
+//			
+//			//finally done writing secondary
+//			bw.close();
+//			
+//			//Delete actual file such that clean replacement can happen
+//			File af = new File(this.pathfile);
+//			af.delete();
+//			
+//			//create empty file at actual_file_path
+//			File afile = new File(this.pathfile);
+//			
+//			//Iterate through secondary temp file and write ALL values to actual_file
+//    		BufferedWriter bw_a = new BufferedWriter(new FileWriter(afile));
+//    		BufferedReader new_temp_br = new BufferedReader(new FileReader(tfile));
+//    		String s;
+//    		while ((s = new_temp_br.readLine()) != null) {
+//    			bw_a.write(s);
+//    			bw_a.newLine();
+//    		}
+//    		bw_a.close();
+//    		new_temp_br.close();
+//    		
+//    	} catch (IOException e) {
+//			System.out.println("Commit - file not found");
+//		}
+//		
+//    	//Make new temporary file
+//    	this.tid++;
+//    	String still_dir = System.getProperty("user.dir");
+//    	this.temp_path = still_dir+"transaction"+this.tid+".txt";
+//		File tfile = new File(this.temp_path);
+//		try {
+//			tfile.createNewFile();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			System.out.println("commit file creat");
+//		}
+//		//this.temp_file = tfile;
+//    }
+
+
 

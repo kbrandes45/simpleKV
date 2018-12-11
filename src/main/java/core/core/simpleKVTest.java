@@ -12,7 +12,6 @@ import junit.framework.JUnit4TestAdapter;
 import org.junit.Test;
 //import java.io.*;
 import java.util.*;
-
 public class simpleKVTest  {
 
  
@@ -26,18 +25,64 @@ public class simpleKVTest  {
 	  System.out.println(my_kv2.get_actual_path());
   }
   
-  @Test public void nonmemWriteTest() throws Exception {
+  @Test public void multiTxnTest() throws Exception {
 	  SimpleKV my_kv2 = new SimpleKV();
-	  SimpleKV my_kv = my_kv2.initAndMakeStore("/teststore");
-	  long startTime = System.currentTimeMillis();
+	  SimpleKV my_kv = my_kv2.initAndMakeStore("/testmulti");
+	  my_kv.beginTx();
 	  long start = Runtime.getRuntime().freeMemory();
 	  System.out.println("Free "+start);
-	  System.out.println(Runtime.getRuntime().totalMemory());
-	  for (int i = 0; i<10000000; i++) {
+	  for (int i = 0; i<10000; i++) {
 		  String temp = "t"+i;
 		  String tempval = "v"+i;
 		  my_kv.write(temp.toCharArray(), tempval.toCharArray());
 	  }
+	  System.out.println("Free txn1 post "+Runtime.getRuntime().freeMemory());
+	  long out = start - Runtime.getRuntime().freeMemory();
+	  System.out.println("All txn1: "+out);
+	  my_kv.commit();
+	  
+	  my_kv.beginTx();
+	  long start1 = Runtime.getRuntime().freeMemory();
+	  System.out.println("Free txn2: "+start1);
+	  for (int i = 0; i<10000; i++) {
+		  String temp = "a"+i;
+		  String tempval = "c"+i;
+		  my_kv.write(temp.toCharArray(), tempval.toCharArray());
+	  }
+	  System.out.println("Free txn2 post"+Runtime.getRuntime().freeMemory());
+	  long out2 = start - Runtime.getRuntime().freeMemory();
+	  System.out.println("All txn2: "+out2);
+	  my_kv.commit();
+	  
+	  my_kv.beginTx();
+	  long start2 = Runtime.getRuntime().freeMemory();
+	  System.out.println("Free txn3:"+start2);
+	  for (int i = 0; i<10000; i++) {
+		  String temp = "t"+i;
+		  String tempval = "v"+666+i;
+		  my_kv.write(temp.toCharArray(), tempval.toCharArray());
+	  }
+	  System.out.println("Free txn3 post"+Runtime.getRuntime().freeMemory());
+	  long out3 = start2 - Runtime.getRuntime().freeMemory();
+	  System.out.println("All txn3: "+out3);
+	  my_kv.commit();
+  }
+  
+  @Test public void nonmemWriteTest() throws Exception {
+	  SimpleKV my_kv2 = new SimpleKV();
+	  SimpleKV my_kv = my_kv2.initAndMakeStore("/teststore");
+	  my_kv.beginTx();
+	  long startTime = System.currentTimeMillis();
+	  long start = Runtime.getRuntime().freeMemory();
+	  System.out.println("Free "+start);
+	  System.out.println(Runtime.getRuntime().totalMemory());
+	  for (int i = 0; i<10000; i++) {
+		  String temp = "t"+i;
+		  String tempval = "v"+i;
+		  my_kv.write(temp.toCharArray(), tempval.toCharArray());
+	  }
+	  String t = "v"+100000;
+	  System.out.println(t.toCharArray().length);
 	  System.out.println("Free "+Runtime.getRuntime().freeMemory());
 	  System.out.println("Total "+Runtime.getRuntime().totalMemory());
 	  long out = start - Runtime.getRuntime().freeMemory();
@@ -47,19 +92,19 @@ public class simpleKVTest  {
 	  System.out.println("Loaded 100,000 writes in "+ duration+" ms");
 	  long throughput = (long) ((100000/duration)*(1/.001));
 	  System.out.println("Throughput: "+throughput);
-    
+	  my_kv.commit();
   }
   
   @Test public void testfileRead() {
 	  SimpleKV my_kv = new SimpleKV();
-	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;
-	  assertEquals(my_kv2.get_size(),2);
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/read_test");
+	  //assertEquals(my_kv2.get_size(),2);
 	  System.out.println(my_kv2.read((new String("hello")).toCharArray()));
   }
   
   @Test public void testNonMemRead() {
 	  SimpleKV my_kv = new SimpleKV();
-	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/read_test");
 	  System.out.println(my_kv2.get_path());
 	  //assertEquals(my_kv2.get_size(),2);
 	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
@@ -72,7 +117,7 @@ public class simpleKVTest  {
   
   @Test public void testNonMemWrite() {
 	  SimpleKV my_kv2 = new SimpleKV();
-	  SimpleKV my_kv= my_kv2.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  SimpleKV my_kv= my_kv2.initAndMakeStore("/test");
 	  
 	  //assertEquals(my_kv2.get_size(),2);
 	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
@@ -87,7 +132,7 @@ public class simpleKVTest  {
   }
   @Test public void testNonMemRR() {
 	  SimpleKV my_kv2 = new SimpleKV();
-	  SimpleKV my_kv= my_kv2.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");
+	  SimpleKV my_kv= my_kv2.initAndMakeStore("/test");
 	  
 	  //assertEquals(my_kv2.get_size(),2);
 	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
@@ -105,11 +150,11 @@ public class simpleKVTest  {
   
   @Test public void testCommit() {
 	  SimpleKV my_kv = new SimpleKV();
-	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/home/kbrandes/simpleKV/src/main/java/core/test.txt");;
+	  SimpleKV my_kv2 = my_kv.initAndMakeStore("/test");;
 	  
 	  //System.out.println(my_kv2.read((new String("hello")).toCharArray()));
-	  my_kv2.help_overwrite("/home/kbrandes/simpleKV/src/main/java/core/core/over_temp.txt");
-	  System.out.println("overwrite done");
+	  //my_kv2.help_overwrite("/home/kbrandes/simpleKV/src/main/java/core/core/over_temp.txt");
+	  //System.out.println("overwrite done");
 	  my_kv2.commit();
 	  //go check file on your own
   }
@@ -299,4 +344,4 @@ public class simpleKVTest  {
   public static junit.framework.Test suite() {
     return new JUnit4TestAdapter(simpleKVTest.class);
   }
-}
+}  
