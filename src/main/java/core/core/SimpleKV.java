@@ -1,7 +1,6 @@
 package core;
 import java.io.*;
 import java.util.*;
-import java.util.Iterator;
 
 public class SimpleKV implements KeyValue {
 	private HashMap<String, char[]> krazy_keys;
@@ -39,7 +38,7 @@ public class SimpleKV implements KeyValue {
     }
     
     public double get_memory() {
-    	return this.get_size()*0.000032;
+    	return this.get_size()*0.00042;
     }
     
     public int get_size() {
@@ -74,9 +73,9 @@ public class SimpleKV implements KeyValue {
 				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
-					if (kv.get_memory() > 50) {
+					if (kv.get_memory() > 350) {
 						//write to temp file
-						System.out.println("Write to temp!");
+						//System.out.println("Write to temp!");
 						bw.write(s);
 						bw.newLine();
 					}else {
@@ -106,7 +105,7 @@ public class SimpleKV implements KeyValue {
     		String k_string = new String(key);
     		// Check if key in hashMap or if hashMap has space
     		// >>>>>> CHANGE TO < 500 MB WHICH IS 524288000 bytes <<<<<
-    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 50) {
+    		if (this.krazy_keys.containsKey(k_string) || this.get_memory() < 350) {
     			this.krazy_keys.put(k_string, value);
     		} // Evict Pair from hashMap to temp and insert new KV pair into hashMap
     		else {
@@ -175,10 +174,32 @@ public class SimpleKV implements KeyValue {
     	}
 
     }
+    
+    public void flush() {
+    	Object[] keyarr = this.krazy_keys.keySet().toArray();
+    	try {
+			BufferedWriter temp_br = new BufferedWriter(new FileWriter(this.temp_path, true));
+			for (Object oevict : keyarr) {
+				String keyToEvict = (String) oevict;
+				//System.out.println("Write to temp: "+ keyToEvict);
+				//Write evicted pair to end of temp file
+				temp_br.write(keyToEvict + " , " + new String(this.krazy_keys.get(keyToEvict)));
+				temp_br.newLine();				
+				this.krazy_keys.remove(keyToEvict);
+			}
+			temp_br.close();
+		} catch (IOException e1) {
+			System.out.println("Unable to open/use temp file");
+		}
+    	keyarr = null;
+    }
 
     @Override
     public Iterator<KVPair> readRange(char[] startKey, char[] endKey) {
-    	return new ReadRangeIterator(this.krazy_keys, this.temp_path, new String(startKey), new String(endKey));
+    	//flush
+    	flush();
+
+    	return new KVReadRangeIterator(this.temp_path, new String(startKey), new String(endKey));
 //    	ArrayList<KVPair> temp_pairs = new ArrayList<KVPair>(); // most up to date KV pairs
 //    	//Map = key string, index at which respective kv pair is in temp_pair
 //    	HashMap<String, Integer> indexes = new HashMap<String, Integer>(); 
@@ -247,9 +268,9 @@ public class SimpleKV implements KeyValue {
 				String s; 
 				try {
 					while ((s = br.readLine()) != null) {
-						if (this.get_memory() > 50) {
+						if (this.get_memory() > 350) {
 							//write to temp file
-							System.out.println("Write to temp!");
+							//System.out.println("Write to temp!");
 							bw.write(s);
 							bw.newLine();
 						}else {
@@ -343,6 +364,107 @@ public class SimpleKV implements KeyValue {
 			System.out.println("commit: new txn temp_file failed to create");
 		}
 		this.temp_populated=false;
+    	
+    }
+    
+    public class KVReadRangeIterator implements Iterator<KVPair> {
+    	//private final HashMap<String, char[]> krazy_keys;
+    	//private final Object[] keys_from_map;
+    	//private int index_in_map;
+    	private final String temp_path;
+    	private final HashSet<String> keys_from_temp;
+    	private int temp_linecount;
+    	private KVPair next;
+    	private String start;
+    	private String end;
+
+    	
+    	public KVReadRangeIterator(String temp_path, String start, String end) {
+    		//this.krazy_keys = krazy_keys;
+    		//this.keys_from_map = krazy_keys.keySet().toArray();
+    		//this.index_in_map = 0; 
+    		this.temp_path = temp_path;
+    		this.keys_from_temp = new HashSet<>();
+    		this.temp_linecount = 0; 
+    		this.next = null;
+    		this.start = start;
+    		this.end = end;
+    	}
+    	
+    	@Override
+    	public boolean hasNext() {
+    		String key = "";
+    		// First iterate through Hashmap
+    		
+//    		while (this.index_in_map < this.keys_from_map.length) {
+//    			key = (String) this.keys_from_map[index_in_map];
+//    			boolean in_range = key.compareTo(start) >=0 && key.compareTo(end)<=0;
+//    			this.index_in_map++;
+//    			if (in_range) {
+//    				this.next = new KVPair(key.toCharArray(), krazy_keys.get(key));
+//    				return true;
+//    			}
+//    			
+//    		}
+    			
+    		 // Then iterate through temp, ignoring keys seen in HashMap  
+    	
+    		File temp_file = new File(this.temp_path);
+    		try {
+    			BufferedReader br = new BufferedReader(new FileReader(temp_file));
+    			String s;
+    			int i = 0; 
+    			boolean found_new_key = false;
+    			String value = "";
+    			// read through entire temp file
+    			while ((s = br.readLine()) != null) { 
+    				// ignore lines that are before the last new key 
+    				if (i > this.temp_linecount) {
+    					String[] arrofpair = s.split(" , ");
+    					// if new key hasn't been found, then keep searching for one
+    					if (!found_new_key) {
+    						// if key not in HashMap or in keys seen from temp, then store this new key
+    						
+    						if (!(krazy_keys.containsKey(arrofpair[0]) || this.keys_from_temp.contains(arrofpair[0]))) {
+    							if(arrofpair[0].compareTo(start) >=0 && arrofpair[0].compareTo(end)<=0) {
+    								key = arrofpair[0];
+    								value = arrofpair[1];
+    								found_new_key = true;
+    								this.keys_from_temp.add(key);
+    								this.temp_linecount = i; 
+    							}
+    						}
+    					} // if new key found, then check if current line contains updated value 
+    					else {
+    						if (arrofpair[0].equals(key)) {
+    							value = arrofpair[1];
+    						}
+    					}
+    				} 
+    				i++; 
+    			}
+    			br.close();
+    			if (found_new_key) {
+    				this.next = new KVPair(key.toCharArray(), value.toCharArray());
+    				return true;
+    			}
+    			return false;
+    		} catch (FileNotFoundException e) {
+    			System.out.println("Couldn't open temp file in readRange");
+    		} catch (IOException e) {
+    			// TODO Auto-generated catch block
+    			System.out.println("Couldn't read temp file line in readRange");
+    		}
+    		
+    		
+    		// no more values 
+    		return false;
+    	}
+
+    	@Override
+    	public KVPair next() {
+    		return this.next;
+    	}
     	
     }
     
