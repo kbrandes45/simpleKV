@@ -291,8 +291,6 @@ public class SimpleKV implements KeyValue {
 				System.out.println("buffered read of temp fialing in begin txn");
 			}
     		
-    		
-    		
     	}
     	
     }
@@ -348,6 +346,12 @@ public class SimpleKV implements KeyValue {
 		}
 		
 		this.tid++;
+		
+		//clear out temp files because now on disk and dont want silly errors
+		File to_remove = new File(this.temp_path);
+		to_remove.delete();
+		
+		//Set new temp path with incremented txn id
     	String still_dir = System.getProperty("user.dir");
     	this.temp_path = still_dir+"/transaction"+this.tid+".txt";
 		File tfile = new File(this.temp_path);
