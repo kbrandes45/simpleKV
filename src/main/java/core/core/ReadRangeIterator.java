@@ -9,12 +9,16 @@ public class ReadRangeIterator implements Iterator {
 	private String temp_path;
 	private File temp_file;
 	private KVPair next;
+	private Integer current_offset;
+	
+
 	
 	public ReadRangeIterator(HashMap<String, char[]> krazy_keys, String temp_path, File temp_file) {
 		this.krazy_keys = krazy_keys;
 		this.temp_path = temp_path;
 		this.temp_file = temp_file;
 		this.next = null;
+		this.current_offset = 0;
 	}
 	
 	@Override

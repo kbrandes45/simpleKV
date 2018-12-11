@@ -1,6 +1,7 @@
 hello , hi
 bye , b
 sup , dude
+kathleen , k
 hello , hi
 bye , b
 sup , dude
