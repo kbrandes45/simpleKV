@@ -51,18 +51,16 @@ public class SimpleKV implements KeyValue {
     public SimpleKV initAndMakeStore(String path) {
     	SimpleKV kv = new SimpleKV();
     	if (path !=  null) {
+    		System.out.println("Init and Make Store");
     		String dir = System.getProperty("user.dir");
     		kv.pathfile = dir+path+".txt";
     		File files = new File(kv.pathfile);
-    		System.out.println(kv.pathfile);
     		try {
 				files.createNewFile();
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
 				System.out.println("file failed");
 			}
-    		//kv.actual_file = files;
-    		//System.out.println(dir);
+    		
     		kv.temp_path = dir+"/transaction"+kv.tid+".txt";
     		File clearout = new File(kv.temp_path);
     		clearout.delete();
@@ -70,13 +68,10 @@ public class SimpleKV implements KeyValue {
     		try {
 				tfile.createNewFile();
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
 				System.out.println("temp fails");
 			}
-    		//kv.temp_file = tfile;
     		try {
 				BufferedReader br = new BufferedReader( new FileReader(new File(kv.pathfile)));
-				//System.out.println("here");
 				BufferedWriter bw = new BufferedWriter( new FileWriter(tfile));
 				String s; 
 				while ((s = br.readLine()) != null) {
@@ -93,8 +88,8 @@ public class SimpleKV implements KeyValue {
 				}
 				br.close();
 				bw.close();
-				this.temp_populated = true;
-				//kv.temp_file = tfile;
+				kv.temp_populated = true;
+				
 			} catch (FileNotFoundException e) {
 				//throwing the error for buffered reader of actual file
 				//File a = new File (kv.pathfile);
@@ -104,7 +99,7 @@ public class SimpleKV implements KeyValue {
 				System.out.println("Readline of buffered reader failed");
 			}
     	}
-    	
+    	System.out.println("Returning kv"+kv.temp_populated);
     	return kv;
     }
 
@@ -259,6 +254,7 @@ public class SimpleKV implements KeyValue {
     @Override
     public void beginTx() {
     	if (!temp_populated) {
+    		System.out.println("Repopulate temp bc no crash");
     		//must populated ourselves
     		File temp_file = new File(this.temp_path);
     		this.krazy_keys = new HashMap<String, char[]>();
